@@ -6,11 +6,20 @@
 #include <cstdint>
 #include <cstring>
 #include <map>
-#include <queue>
 #include <string>
 
 #include "common.h"
 #include "memtracer.h"
+
+class lfsr_t {
+   public:
+    lfsr_t() : reg(1) {}
+    lfsr_t(const lfsr_t& lfsr) : reg(lfsr.reg) {}
+    uint32_t next() { return reg = (reg >> 1) ^ (-(reg & 1) & 0xd0000001); }
+
+   private:
+    uint32_t reg;
+};
 
 class cache_sim_t {
    public:
@@ -33,14 +42,14 @@ class cache_sim_t {
     virtual uint64_t* check_tag(uint64_t addr);
     virtual uint64_t victimize(uint64_t addr);
 
+    lfsr_t lfsr;
     cache_sim_t* miss_handler;
 
-    size_t sets;       // how many cache entries
-    size_t ways;       // how many blocks in an entry
-    size_t linesz;     // block size
-    size_t idx_shift;  // offset
+    size_t sets;
+    size_t ways;
+    size_t linesz;
+    size_t idx_shift;
 
-    size_t* way_idx;  // record way index of each set (which way to replace)
     uint64_t* tags;
 
     uint64_t read_accesses;
@@ -62,6 +71,10 @@ class fa_cache_sim_t : public cache_sim_t {
     fa_cache_sim_t(size_t ways, size_t linesz, const char* name);
     uint64_t* check_tag(uint64_t addr);
     uint64_t victimize(uint64_t addr);
+
+   private:
+    static bool cmp(uint64_t a, uint64_t b);
+    std::map<uint64_t, uint64_t> tags;
 };
 
 class cache_memtracer_t : public memtracer_t {
